@@ -85,7 +85,7 @@ In this project, I use 20 agents to see how they can speed up the training.
 
 **1. First approach**
 
-**Strategy**: A tuple (state, action, rewards, next state) of each agent is saved into the reply buffer, and then actor and critic are trained for each reply buffer addition. For stability, gradient clipping is used for critic network training. In PyTorch, gradient clipping can be done suing torch.nn.utils.clip_grad_norm_() function as below.
+**Strategy**: A tuple (state, action, rewards, next state) of each agent is saved into the reply buffer, and then actor and critic are trained for each reply buffer addition. For stability, gradient clipping is used for critic network training. In PyTorch, gradient clipping can be done suing torch.nn.utils.clip_grad_norm_() function as below. The learning happens once every timestep.
 
    ```py
    # Minimize the loss
@@ -95,7 +95,7 @@ In this project, I use 20 agents to see how they can speed up the training.
    self.critic_optimizer.step()
    ```
 
-**Result**: The score is increased rapidly in the early phase, and goes above 35 before 100 episode because it learns fast from 20 agents. However, the policy gets unstable due to the large number of updates after about 100 episodes, and eventually it gets worse after about 250 episodes.
+**Result**: The score is increased rapidly in the early phase, and goes above 35 before 100 episode.But the average of 100 episode is not hitting 30, and even gets worse after about 100 episodes. Eventually it gets worse after about 250 episodes.
 
    ```
    Episode 100	Average Score: 22.59	10 episodes took 1635.68 seconds
@@ -110,16 +110,43 @@ In this project, I use 20 agents to see how they can speed up the training.
 
 **2. Second approach**
 
-**Strategy**: In order to address the instability due to too frequent network update, the number of traning is reduced. From every time to once per 4 replay buffer addition.
+**Strategy**: In order to address the instability which crashes the policy after about 300 episodes, the number of traning is reduced from 1 training per 1 timesteps to 1 training per 2 timesteps.
 
-**Result**:
+```py
+UPDATE_FREQ = 2
 
+def step(self, state, action, reward, next_state, done):
+	"""Save experience in replay memory, and use random sample from buffer to learn."""
+	# Save experience / reward
+	for i in range(len(reward)):
+		self.memory.add(state[i,:], action[i,:], reward[i], next_state[i,:], done[i])
 
+	# Learn, if enough samples are available in memory
+	self.step_count = ( self.step_count + 1 ) % UPDATE_FREQ
+	if self.step_count == 0 and len(self.memory) > BATCH_SIZE:
+		experiences = self.memory.sample()
+		self.learn(experiences, GAMMA)
+```
 
-**Plot of rewards**
+**Result**: With this modification, the average score over 100 episode hits 30 at 126 episode, and the average score of 20 agents for each episode is maintained until about 160 episode. After that, the policy starts to be crashed again. Comparing the result of the first approach, adjusting the frequency of training maight make it more stable.
 
+```
+Episode 100	Average Score: 21.79	10 episodes took 1073.28 seconds
+Environment has been solved in 126 episode with average score 30.24
+Episode 200	Average Score: 27.29	10 episodes took 1120.68 seconds
+Episode 300	Average Score: 10.68	10 episodes took 1049.27 seconds
+Episode 400	Average Score: 3.55	10 episodes took 1024.49 seconds
+```
 
+**Plot of reward**
+
+![Scores](./resources/ddpg-train-20-agent-2.png)
 
 ### Ideas for Future work
 
-Trust Region Policy Optimization (TRPO) and Truncated Natural Policy Gradient (TNPG) are known to give more stable network. Proximal Policy Optimization (PPO) is another reinforcement learning algorithm which can be used for continuous control task.
+One small idea to stablize the policy which has been trained well is to reduce the noise adding to the action once the average score hits the desired score (30).
+
+Adjusting the training frequency and the number of trainings at a time is another idea worth to try.
+
+Other than tuning DDPG implementation, I could apply other algorithms. Trust Region Policy Optimization (TRPO) and Truncated Natural Policy Gradient (TNPG) are known to give more stable network. Proximal Policy Optimization (PPO) is another reinforcement learning algorithm which can be used for continuous control task.
+
