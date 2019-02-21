@@ -16,6 +16,7 @@ TAU = 1e-3              # for soft update of target parameters
 LR_ACTOR = 2e-4         # learning rate of the actor 
 LR_CRITIC = 2e-4        # learning rate of the critic
 WEIGHT_DECAY = 0        # L2 weight decay
+UPDATE_FREQ = 2
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -53,6 +54,8 @@ class Agent():
 
         # Replay memory
         self.memory = ReplayBuffer(action_size, BUFFER_SIZE, BATCH_SIZE, random_seed)
+        
+        self.step_count = 0
     
     def step(self, state, action, reward, next_state, done):
         """Save experience in replay memory, and use random sample from buffer to learn."""
@@ -66,7 +69,8 @@ class Agent():
 #             return
 #         print('--->',len(self.memory))
         # Learn, if enough samples are available in memory
-        if len(self.memory) > BATCH_SIZE:
+        self.step_count = ( self.step_count + 1 ) % UPDATE_FREQ
+        if self.step_count == 0 and len(self.memory) > BATCH_SIZE:
 #             print('train!')
             experiences = self.memory.sample()
             self.learn(experiences, GAMMA)
