@@ -150,3 +150,9 @@ Adjusting the training frequency and the number of trainings at a time is anothe
 
 Other than tuning DDPG implementation, I could apply other algorithms. Trust Region Policy Optimization (TRPO) and Truncated Natural Policy Gradient (TNPG) are known to give more stable network. Proximal Policy Optimization (PPO) is another reinforcement learning algorithm which can be used for continuous control task.
 
+
+
+### Addtional Resource
+
+* [Learning Dexterity](https://blog.openai.com/learning-dexterity/)
+
